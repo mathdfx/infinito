@@ -54,17 +54,29 @@ bun run dev
 
 Verify safety under parallel requests (runs require the API server running + DB seeded):
 
-- **Concurrency & Pay-Race Suite:** Asserts both order reservation and payment concurrency. Proves that only one user can reserve the last ticket when ordering concurrently, and that double-submitting a payment on a pending order results in exactly one success:
+- **Order Reservation Race Test:** Proves that two parallel order reservations for the last remaining ticket result in exactly one success and one failure.
   ```bash
+  bun run test:concurrency
+  # or directly:
   bun --env-file=apps/api/.env apps/api/src/concurrency-test.ts
+  ```
+
+- **Payment Processing Race Test:** Proves that two parallel payment requests for the same order result in exactly one success and one failure, and generates exactly one ticket.
+  ```bash
+  bun run test:pay-race
+  # or directly:
+  bun --env-file=apps/api/.env apps/api/src/pay-race-test.ts
   ```
 
 ## Scripts
 
-| Command            | Description                          |
-| ------------------ | ------------------------------------ |
-| `bun run dev`      | Start all dev servers via Turborepo  |
-| `bun run typecheck`| TypeScript check across monorepo     |
-| `bun run lint`     | Lint across monorepo (using oxlint)  |
-| `bun run db:push`  | Push Drizzle schema to DB            |
-| `bun run db:seed`  | Seed sample events and ticket types  |
+| Command                  | Description                                            |
+| ------------------------ | ------------------------------------------------------ |
+| `bun run dev`            | Start all dev servers via Turborepo                    |
+| `bun run typecheck`      | TypeScript check across monorepo                       |
+| `bun run lint`           | Lint across monorepo (using oxlint)                    |
+| `bun run db:push`        | Push Drizzle schema to DB                              |
+| `bun run db:seed`        | Seed sample events and ticket types                    |
+| `bun run test:concurrency`| Run the order reservation concurrency test            |
+| `bun run test:pay-race`  | Run the payment processing race concurrency test       |
+

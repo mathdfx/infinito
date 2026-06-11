@@ -11,7 +11,9 @@
     "db:push": "bun run --cwd packages/db push",
     "db:generate": "bun run --cwd packages/db generate",
     "db:migrate": "bun run --cwd packages/db migrate",
-    "db:seed": "bun run --cwd packages/db seed"
+    "db:seed": "bun run --cwd packages/db seed",
+    "test:concurrency": "bun --env-file=apps/api/.env apps/api/src/concurrency-test.ts",
+    "test:pay-race": "bun --env-file=apps/api/.env apps/api/src/pay-race-test.ts"
   },
   "devDependencies": {
     "oxlint": "^1.69.0",

@@ -2,13 +2,12 @@ import { db, ticketTypes, orders, orderItems } from "@ticket-demo/db";
 import { eq, inArray } from "drizzle-orm";
 
 /**
- * Concurrency and Pay-Race test:
- * Phase 1: Proves that two parallel POST /orders for the last remaining ticket
- *          results in exactly one success and one failure.
- * Phase 2: Proves that two parallel POST /orders/:id/pay for the same order
- *          results in exactly one success and one failure (already paid).
+ * Pay-Race test:
+ * Proves that two parallel POST /orders/:id/pay for the same order
+ * results in exactly one success and one failure (already paid),
+ * and generates exactly 1 new ticket in GET /api/me/tickets.
  *
- * Usage: bun run apps/api/src/concurrency-test.ts
+ * Usage: bun run apps/api/src/pay-race-test.ts
  * Requires: API server running + DB seeded
  */
 
@@ -22,7 +21,6 @@ async function createUser(name: string, email: string, password: string) {
   });
   if (!res.ok) {
     const body = await res.text();
-    // User might already exist, try sign-in
     if (body.includes("already") || res.status === 422 || res.status === 400) {
       return signIn(email, password);
     }
@@ -78,25 +76,31 @@ async function createOrder(
   return { ok: res.ok, status: res.status, body };
 }
 
+async function getTicketsCount(cookie: string): Promise<number> {
+  const res = await fetch(`${API}/api/me/tickets`, {
+    headers: { Cookie: cookie },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch tickets: ${res.status} ${await res.text()}`);
+  }
+  const body = await res.json();
+  return body.data.length;
+}
+
 async function main() {
-  console.log("=== Concurrency & Pay-Race Test ===\n");
+  console.log("=== Pay-Race Concurrency Test ===\n");
 
-  // 1. Create two test users
-  console.log("Creating test users...");
-  const cookie1 = await createUser(
-    "Concurrency User 1",
-    "concurrent1@test.com",
+  // 1. Authenticate or create a specific test user
+  console.log("Authenticating test user...");
+  const cookie = await createUser(
+    "Pay Race User",
+    "payrace@test.com",
     "testpass123"
   );
-  const cookie2 = await createUser(
-    "Concurrency User 2",
-    "concurrent2@test.com",
-    "testpass123"
-  );
-  console.log("Users ready.\n");
+  console.log("User authenticated.\n");
 
-  // 2. Find a ticket type
-  console.log("Finding ticket type with limited stock...");
+  // 2. Find a ticket type with stock
+  console.log("Finding ticket type with available stock...");
   const eventsList = await getEvents();
   let targetTicketTypeId = "";
   let targetName = "";
@@ -122,7 +126,6 @@ async function main() {
 
   // 3. Reset database records for this ticket type and set stock to exactly 1
   console.log("Resetting database records and setting stock to exactly 1...");
-  // Clear any existing orders referencing this ticket type to ensure 0 sold
   const itemsToClear = await db
     .select({ orderId: orderItems.orderId })
     .from(orderItems)
@@ -134,7 +137,6 @@ async function main() {
     await db.delete(orders).where(inArray(orders.id, orderIds));
   }
 
-  // Update target ticket type total quantity to 1
   await db
     .update(ticketTypes)
     .set({ quantityTotal: 1 })
@@ -142,28 +144,62 @@ async function main() {
 
   console.log("Database updated: exactly 1 ticket is available.\n");
 
-  // --- PHASE 1: Order Reservation Race ---
-  console.log("--- PHASE 1: Firing two concurrent order requests for the last ticket ---");
-  const [r1, r2] = await Promise.all([
-    createOrder(cookie1, targetTicketTypeId, 1),
-    createOrder(cookie2, targetTicketTypeId, 1),
-  ]);
+  // 4. Get ticket count before payment
+  const countBefore = await getTicketsCount(cookie);
+  console.log(`Initial tickets count for user: ${countBefore}`);
 
-  console.log(`User 1 Reservation: ${r1.status} — ${r1.body}`);
-  console.log(`User 2 Reservation: ${r2.status} — ${r2.body}`);
-
-  const successes = [r1, r2].filter((r) => r.ok).length;
-  const failures = [r1, r2].filter((r) => !r.ok).length;
-
-  console.log(`Results: ${successes} reservation success(es), ${failures} failure(s)`);
-
-  if (successes !== 1 || failures !== 1) {
-    console.error("❌ FAIL Phase 1: Expected exactly 1 reservation success and 1 failure.");
+  // 5. Create the order
+  console.log("Creating order...");
+  const orderRes = await createOrder(cookie, targetTicketTypeId, 1);
+  if (!orderRes.ok) {
+    console.error(`❌ Order creation failed: ${orderRes.status} - ${orderRes.body}`);
     process.exit(1);
   }
-  console.log("✅ PASS Phase 1: Order race condition handled correctly.\n");
+  const orderData = JSON.parse(orderRes.body);
+  const orderId = orderData.data.id;
+  console.log(`Order created successfully: ${orderId}\n`);
 
-  console.log("\n🎉 CONCURRENCY TEST PASSED SUCCESSFULLY! 🎉");
+  // 6. Fire two concurrent payment requests
+  console.log(`--- Firing two concurrent payment requests for order ${orderId} ---`);
+  const [payRes1, payRes2] = await Promise.all([
+    fetch(`${API}/api/orders/${orderId}/pay`, {
+      method: "POST",
+      headers: { Cookie: cookie },
+    }),
+    fetch(`${API}/api/orders/${orderId}/pay`, {
+      method: "POST",
+      headers: { Cookie: cookie },
+    }),
+  ]);
+
+  const p1Body = await payRes1.text();
+  const p2Body = await payRes2.text();
+
+  console.log(`Payment Request 1: ${payRes1.status} — ${p1Body}`);
+  console.log(`Payment Request 2: ${payRes2.status} — ${p2Body}`);
+
+  const paySuccesses = [payRes1, payRes2].filter((r) => r.ok).length;
+  const payFailures = [payRes1, payRes2].filter((r) => !r.ok).length;
+
+  console.log(`Results: ${paySuccesses} payment success(es), ${payFailures} failure(s)`);
+
+  if (paySuccesses !== 1 || payFailures !== 1) {
+    console.error("❌ FAIL: Expected exactly 1 payment success and 1 failure.");
+    process.exit(1);
+  }
+  console.log("✅ PASS: Payment race condition handled correctly — exactly one payment succeeded.");
+
+  // 7. Get ticket count after payment
+  const countAfter = await getTicketsCount(cookie);
+  console.log(`Subsequent tickets count for user: ${countAfter}`);
+
+  if (countAfter !== countBefore + 1) {
+    console.error(`❌ FAIL: Expected exactly ${countBefore + 1} tickets, but got ${countAfter}`);
+    process.exit(1);
+  }
+  console.log(`✅ PASS: Ticket counts verify exactly 1 new ticket was created.`);
+
+  console.log("\n🎉 ALL PAY-RACE CONCURRENCY TESTS PASSED SUCCESSFULLY! 🎉");
   process.exit(0);
 }
 

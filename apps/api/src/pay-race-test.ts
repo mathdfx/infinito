@@ -1,4 +1,4 @@
-import { db, ticketTypes, orders, orderItems } from "@ticket-demo/db";
+import { db, ticketTypes, orders, orderItems, tickets } from "@ticket-demo/db";
 import { eq, inArray } from "drizzle-orm";
 
 /**
@@ -127,12 +127,14 @@ async function main() {
   // 3. Reset database records for this ticket type and set stock to exactly 1
   console.log("Resetting database records and setting stock to exactly 1...");
   const itemsToClear = await db
-    .select({ orderId: orderItems.orderId })
+    .select({ orderId: orderItems.orderId, itemId: orderItems.id })
     .from(orderItems)
     .where(eq(orderItems.ticketTypeId, targetTicketTypeId));
   
   if (itemsToClear.length > 0) {
     const orderIds = itemsToClear.map(i => i.orderId);
+    const itemIds = itemsToClear.map(i => i.itemId);
+    await db.delete(tickets).where(inArray(tickets.orderItemId, itemIds));
     await db.delete(orderItems).where(inArray(orderItems.orderId, orderIds));
     await db.delete(orders).where(inArray(orders.id, orderIds));
   }

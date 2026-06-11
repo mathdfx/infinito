@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@ticket-demo/config": "workspace:*",
+    "@types/node": "^25.9.3",
     "drizzle-kit": "^0.30",
     "typescript": "^5.7"
   }

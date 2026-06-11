@@ -14,10 +14,11 @@
     "migrate": "bun run src/migrate.ts",
     "push": "drizzle-kit push",
     "seed": "bun run src/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src"
   },
   "dependencies": {
-    "drizzle-orm": "^0.36",
+    "drizzle-orm": "^0.45.2",
     "postgres": "^3.4",
     "nanoid": "^5"
   },

@@ -6,14 +6,15 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint ok'"
+    "lint": "oxlint src"
   },
   "dependencies": {
-    "hono": "^4",
     "@hono/zod-validator": "^0.4",
-    "better-auth": "^1",
     "@ticket-demo/db": "workspace:*",
     "@ticket-demo/schemas": "workspace:*",
+    "better-auth": "^1",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4",
     "nanoid": "^5",
     "zod": "^3.23"
   },

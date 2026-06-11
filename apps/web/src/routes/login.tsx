@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Card,
@@ -7,7 +7,6 @@ import {
   Button,
   Tabs,
   Tab,
-  Divider,
   addToast,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
@@ -47,7 +46,7 @@ function LoginPage() {
       } else {
         navigate({ to: "/" });
       }
-    } catch (err) {
+    } catch {
       addToast?.({
         title: "Erro",
         description: "Falha na conexão",
@@ -75,7 +74,7 @@ function LoginPage() {
       } else {
         navigate({ to: "/" });
       }
-    } catch (err) {
+    } catch {
       addToast?.({
         title: "Erro",
         description: "Falha na conexão",

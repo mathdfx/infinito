@@ -2,7 +2,10 @@
   "extends": "@ticket-demo/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "noEmit": true
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "types": ["vite/client"]
   },
-  "include": ["src"]
+  "include": ["src/**/*"]
 }

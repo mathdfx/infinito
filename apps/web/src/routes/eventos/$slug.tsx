@@ -5,7 +5,6 @@ import {
   CardBody,
   Button,
   Chip,
-  Divider,
   addToast,
 } from "@heroui/react";
 import { Icon } from "@iconify/react";

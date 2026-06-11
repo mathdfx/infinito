@@ -6,7 +6,7 @@ import {
   integer,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ── Better Auth tables ────────────────────────────────
 export const user = pgTable("user", {
@@ -90,6 +90,10 @@ export const orders = pgTable("orders", {
     .default("pending"),
   totalCents: integer("total_cents").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Pending orders stop counting against stock after this moment (lazy expiry, no cron).
+  expiresAt: timestamp("expires_at")
+    .notNull()
+    .default(sql`now() + interval '10 minutes'`),
 });
 
 export const orderItems = pgTable("order_items", {

@@ -11,6 +11,11 @@ Demo ticket-selling app built with **Turborepo + Bun workspaces**.
 | Database | PostgreSQL 16 (Docker Compose)                             |
 | Shared   | Zod schemas (packages/schemas)                             |
 
+## Stack Deviations
+
+- **HeroUI & Tailwind:** HeroUI v2 + Tailwind 3 is used instead of HeroUI v3 for compatibility.
+- **Icons:** Solar icons are served via `@iconify/react`.
+
 ## Quick Start
 
 ```bash
@@ -25,10 +30,10 @@ cp apps/api/.env.example apps/api/.env    # if not present
 cp apps/web/.env.example apps/web/.env    # if not present
 
 # 4. Push database schema
-cd packages/db && bun run push && cd ../..
+bun run db:push
 
 # 5. Seed sample data
-cd packages/db && bun run seed && cd ../..
+bun run db:seed
 
 # 6. Start dev servers
 bun run dev
@@ -45,13 +50,14 @@ bun run dev
 4. **Pay** on the checkout page
 5. **View QR tickets** at `/meus-ingressos`
 
-## Concurrency Test
+## Concurrency & Race Tests
 
-Proves that two parallel orders for the last remaining ticket result in exactly one success:
+Verify safety under parallel requests (runs require the API server running + DB seeded):
 
-```bash
-bun run apps/api/src/concurrency-test.ts
-```
+- **Concurrency & Pay-Race Suite:** Asserts both order reservation and payment concurrency. Proves that only one user can reserve the last ticket when ordering concurrently, and that double-submitting a payment on a pending order results in exactly one success:
+  ```bash
+  bun --env-file=apps/api/.env apps/api/src/concurrency-test.ts
+  ```
 
 ## Scripts
 
@@ -59,6 +65,6 @@ bun run apps/api/src/concurrency-test.ts
 | ------------------ | ------------------------------------ |
 | `bun run dev`      | Start all dev servers via Turborepo  |
 | `bun run typecheck`| TypeScript check across monorepo     |
-| `bun run lint`     | Lint across monorepo                 |
+| `bun run lint`     | Lint across monorepo (using oxlint)  |
 | `bun run db:push`  | Push Drizzle schema to DB            |
 | `bun run db:seed`  | Seed sample events and ticket types  |

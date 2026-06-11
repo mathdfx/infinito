@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { db, events, ticketTypes, orderItems, orders } from "@ticket-demo/db";
+import { db, events, orderItems, orders } from "@ticket-demo/db";
 import { eq, ilike, sql } from "drizzle-orm";
 import { eventsQuerySchema } from "@ticket-demo/schemas";
 import type { EventResponse, EventDetailResponse } from "@ticket-demo/schemas";
@@ -55,7 +55,7 @@ app.get("/:slug", async (c) => {
       sql`${orderItems.ticketTypeId} IN (${sql.join(
         event.ticketTypes.map((tt) => sql`${tt.id}`),
         sql`, `
-      )}) AND ${orders.status} IN ('pending', 'paid')`
+      )}) AND (${orders.status} = 'paid' OR (${orders.status} = 'pending' AND ${orders.expiresAt} > now()))`
     )
     .groupBy(orderItems.ticketTypeId);
 

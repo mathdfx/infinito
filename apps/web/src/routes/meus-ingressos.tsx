@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardBody, Chip, Divider, Spinner } from "@heroui/react";
 import { Icon } from "@iconify/react";

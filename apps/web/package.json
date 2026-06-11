@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint ok'"
+    "lint": "oxlint src"
   },
   "dependencies": {
     "react": "^19",

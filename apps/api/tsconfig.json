@@ -1,0 +1,8 @@
+{
+  "extends": "@ticket-demo/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["bun-types"]
+  },
+  "include": ["src"]
+}
